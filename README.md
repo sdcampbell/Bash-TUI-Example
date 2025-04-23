@@ -18,3 +18,7 @@ Running commands with variables:
 ![running command with variable - 2](images/running_command_with_variable_2.png)
 
 ![running command with variable - 3](images/running_command_with_variable_3.png)
+
+## ToDo
+
+Tested only on MacOS. Ensure it works on Linux.
