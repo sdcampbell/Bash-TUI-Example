@@ -1,5 +1,5 @@
 # Bash-TUI-Example
-A starter package for a Bash TUI program
+A starter package for a Bash text user interface (TUI) menu. Helpful for occasions where you have a long list of complex commands or want to create a menu of commands so the user simply picks commands to run. Provides the option for the user to enter command variables before running the command, as well as custom commands.
 
 ## Prerequisites
 Requires [fzf](https://github.com/junegunn/fzf)
@@ -19,6 +19,3 @@ Running commands with variables:
 
 ![running command with variable - 3](images/running_command_with_variable_3.png)
 
-## ToDo
-
-Tested only on MacOS. Ensure it works on Linux.
