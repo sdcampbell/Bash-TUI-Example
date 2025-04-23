@@ -265,6 +265,9 @@ execute_command() {
         if [ "$copy_choice" = "c" ] || [ "$copy_choice" = "C" ]; then
             clipboard_copy "$processed_cmd"
             echo "Command copied to clipboard."
+            echo "Press Enter to return to menu..."
+            read
+            return 0
         fi
     fi
     echo ""
