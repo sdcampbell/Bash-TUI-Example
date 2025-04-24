@@ -82,7 +82,7 @@ export RED='\033[0;31m'
 export NC='\033[0m' # No Color
 
 # Create a temporary file to store command history
-HISTORY_FILE="$HOME/.command_runner_history"
+HISTORY_FILE="./.command_runner_history"
 touch "$HISTORY_FILE"
 
 # Define common commands with descriptions
@@ -315,7 +315,7 @@ show_fzf_interface() {
     
     # Show fzf with preview window showing command details
     selected=$(printf '%s\n' "${commands[@]}" | 
-        fzf --height 40% --border --ansi --reverse --preview '
+        fzf --height 100% --border --ansi --reverse --preview '
             desc=$(echo {} | cut -d ":" -f1)
             cmd=$(echo {} | sed "s/.*:://; s/^ *//")
             placeholders=$(echo "$cmd" | grep -o "{[A-Z_]*\(:[^}]*\)*}" || echo "None")
@@ -333,7 +333,7 @@ show_fzf_interface() {
                 done
             fi
         ' \
-            --preview-window=right:50% \
+            --preview-window=down:30% \
             --bind "ctrl-y:execute(
                 cmd=\$(echo {1} | sed 's/.*:://; s/^ *//');
                 echo -n \$cmd > /tmp/fzf_cmd.txt;
