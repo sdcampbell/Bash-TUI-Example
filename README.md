@@ -6,18 +6,8 @@ Works on both Bash and Zsh shells on Linux and MacOS.
 ## Prerequisites
 Requires [fzf](https://github.com/junegunn/fzf)
 
-## Examples
+## Demo
 
-Main menu:
-![main menu](images/main_menu.png)
+In this demo, I've used this project to wrap 47 AWS cli commands. This allows them to be easily organized, searched, update variables, and run or copy the resulting command to the clipboard.
 
-Search and run commands:
-![search and run commands](images/search_and_run_commands.png)
-
-Running commands with variables:
-![running command with variable 1](images/running_command_with_variable_1.png)
-
-![running command with variable - 2](images/running_command_with_variable_2.png)
-
-![running command with variable - 3](images/running_command_with_variable_3.png)
-
+![Demo Video](https://youtu.be/op0Pi2EgJW0)
