@@ -10,4 +10,4 @@ Requires [fzf](https://github.com/junegunn/fzf)
 
 In this demo, I've used this project to wrap 47 AWS cli commands. This allows them to be easily organized, searched, update variables, and run or copy the resulting command to the clipboard.
 
-![Demo Video](https://youtu.be/op0Pi2EgJW0)
+[![Demo Video](https://img.youtube.com/vi/op0Pi2EgJW0/0.jpg)](https://www.youtube.com/watch?v=op0Pi2EgJW0)
