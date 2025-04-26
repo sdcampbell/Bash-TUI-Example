@@ -93,22 +93,34 @@ touch "$HISTORY_FILE"
 common_commands=(
     "List all files with details :: ls -la"
     "List all files in specified directory :: ls -la {DIRECTORY}"
+    "List all files with hidden files option :: ls --all {DIRECTORY}"
     "Find files with specific extension :: find . -name \"*.{EXTENSION}\""
+    "Find files with specific pattern and type :: find . -name \"{PATTERN}\" -type {TYPE:f}"
     "Search for text pattern recursively :: grep -r \"{PATTERN}\" {DIRECTORY:-.}"
+    "Search with regular expression :: grep --regexp {PATTERN} {FILE}"
     "Show disk usage :: df -h"
     "Find specific process :: ps aux | grep {PROCESS_NAME}"
     "Monitor system processes :: top"
     "Show size of files and directories :: du -sh *"
     "Show size of files in specified directory :: du -sh {DIRECTORY}/*"
+    "Show size with depth limit :: du --max-depth {DEPTH:3} {DIRECTORY}"
     "Download file from URL to specific location :: curl -o {OUTPUT_FILE} {URL}"
+    "Download file with options :: curl -o {OUTPUT_FILE} {URL} --retry {RETRIES:3}"
     "Get content from URL :: curl {URL}"
     "Extract tar.gz archive :: tar -xvzf {ARCHIVE_FILE}"
     "Create directory with parents :: mkdir -p {DIRECTORY}"
     "Copy directory recursively :: cp -r {SOURCE} {DESTINATION}"
+    "Copy file with options :: cp {SOURCE} {DESTINATION} --preserve {ATTRIBUTES:all}"
     "Copy file to remote host :: scp {LOCAL_FILE} {USER}@{HOST}:{REMOTE_PATH}"
+    "Copy file to remote with options :: scp --port {PORT:22} {LOCAL_FILE} {USER}@{HOST}:{REMOTE_PATH}"
     "Connect to remote host :: ssh {USER}@{HOST}"
+    "Connect to remote with X11 forwarding :: ssh {USER}@{HOST} --port {PORT:22}"
     "Clone git repository :: git clone {REPOSITORY_URL} {DIRECTORY:-.}"
+    "Clone git repo with options :: git clone {REPOSITORY_URL} --branch {BRANCH:main} {DIRECTORY:-.}"
     "Create and switch to new branch :: git checkout -b {BRANCH_NAME}"
+    "Git checkout with options :: git checkout {BRANCH} --force"
+    "Git pull with options :: git pull --rebase {REMOTE:origin} {BRANCH:main}"
+    "Git push with options :: git push --force {REMOTE:origin} {BRANCH}"
     "Open file with default application :: $OPEN_CMD {FILE}"
 )
 
@@ -156,72 +168,97 @@ if [ -f "$HISTORY_FILE" ]; then
     done < "$HISTORY_FILE"
 fi
 
-# Completely reworked placeholder processing function
+# Function to clean input values before processing
+clean_input_value() {
+    local param_name="$1"
+    local param_value="$2"
+    local cleaned_value="$param_value"
+    
+    # Handle special cases based on parameter name
+    if [[ "$param_name" == "URL" ]] && [[ "$param_value" == http* ]]; then
+        # Extract just the URL, stripping any odd characters that might get appended
+        cleaned_value=$(echo "$param_value" | grep -o 'https\?://[^[:space:];]*' || echo "$param_value")
+    fi
+    
+    echo "$cleaned_value"
+}
+
+# Very simple placeholder processing function
 process_placeholders() {
     local cmd="$1"
     local processed_cmd="$cmd"
     
-    # Create a temporary file for command processing
-    local temp_file=$(mktemp)
-    echo "$cmd" > "$temp_file"
+    # Identify all placeholders in the command
+    local all_placeholders=$(echo "$cmd" | grep -o '{[A-Z_]*\(:[^}]*\)*}' || echo "")
     
-    # Find all placeholders using grep
-    local placeholders=$(grep -o '{[A-Z_]*\(:[^}]*\)*}' "$temp_file" || echo "")
-    
-    if [ -n "$placeholders" ]; then
-        # Create temporary list of unique placeholders
-        local unique_placeholders=$(echo "$placeholders" | sort -u)
+    # Process each placeholder
+    for placeholder in $all_placeholders; do
+        # Extract name and default value
+        local name=$(echo "$placeholder" | sed -E 's/\{([A-Z_]*)(:[^}]*)?\}/\1/')
+        local default=$(echo "$placeholder" | sed -E 's/\{[A-Z_]*:([^}]*)\}/\1/' | grep -v "^{" || echo "")
         
-        # Process each placeholder interactively
-        for placeholder in $unique_placeholders; do
-            # Extract name and default value
-            local name=$(echo "$placeholder" | sed -E 's/\{([A-Z_]*)(:[^}]*)?\}/\1/')
-            local default=$(echo "$placeholder" | sed -E 's/\{[A-Z_]*:([^}]*)\}/\1/' | grep -v "^{" || echo "")
+        # Use direct terminal input/output to ensure visibility
+        if [ -n "$default" ]; then
+            # With default value
+            printf "Enter value for %s [default: %s]:\n" "$name" "$default" >/dev/tty
+            printf "%s > " "$name" >/dev/tty
             
-            # Use direct terminal input/output to ensure visibility
-            if [ -n "$default" ]; then
-                # With default value
-                printf "Enter value for %s [default: %s]:\n" "$name" "$default" >/dev/tty
-                printf "%s > " "$name" >/dev/tty
-                
-                # Read input directly from terminal
-                local input=""
-                read -e input </dev/tty
-                
-                # Use default if nothing entered
-                if [ -z "$input" ]; then
-                    input="$default"
-                fi
-            else
-                # No default value
-                printf "Enter value for %s:\n" "$name" >/dev/tty
-                printf "%s > " "$name" >/dev/tty
-                
-                # Read input directly from terminal
-                local input=""
-                read -e input </dev/tty
-                
-                # Require a value
-                if [ -z "$input" ]; then
-                    printf "Error: A value is required for %s.\n" "$name" >/dev/tty
-                    rm "$temp_file"
-                    return 1
-                fi
+            # Read input directly from terminal
+            local input=""
+            read -e input </dev/tty
+            
+            # Use default if nothing entered
+            if [ -z "$input" ]; then
+                input="$default"
             fi
+        else
+            # No default value
+            printf "Enter value for %s:\n" "$name" >/dev/tty
+            printf "%s > " "$name" >/dev/tty
             
-            # Escape the input for sed
-            input_escaped=$(echo "$input" | sed -e 's/[\/&]/\\&/g')
-            placeholder_escaped=$(echo "$placeholder" | sed -e 's/[\/&]/\\&/g')
+            # Read input directly from terminal
+            local input=""
+            read -e input </dev/tty
             
-            # Update the processed command
-            processed_cmd=$(echo "$processed_cmd" | sed -e "s/$placeholder_escaped/$input_escaped/g")
-        done
-    fi
+            # Require a value
+            if [ -z "$input" ]; then
+                printf "Error: A value is required for %s.\n" "$name" >/dev/tty
+                return 1
+            fi
+        fi
+        
+        # Clean the input for specific parameter types (especially URLs)
+        input=$(clean_input_value "$name" "$input")
+        
+        # Replace the placeholder with the input value in the processed command
+        # We need to escape both the placeholder and the input value for sed
+        placeholder_escaped=$(echo "$placeholder" | sed -e 's/[\/&.^$*[\]]/\\&/g')
+        
+        # For special characters, we'll use a much simpler approach
+        # We create a temporary file for each replacement - slow but reliable
+        local tmp_in=$(mktemp)
+        local tmp_out=$(mktemp)
+        
+        # Write current command to file
+        echo "$processed_cmd" > "$tmp_in"
+        
+        # Prepare input file and replacement file
+        local tmp_placeholder=$(mktemp)
+        local tmp_replacement=$(mktemp)
+        echo "$placeholder" > "$tmp_placeholder"
+        echo "$input" > "$tmp_replacement"
+        
+        # Use a robust replacement approach
+        awk -v placeholder="$(cat $tmp_placeholder)" -v replacement="$(cat $tmp_replacement)" '{gsub(placeholder, replacement); print}' "$tmp_in" > "$tmp_out"
+        
+        # Get the processed result
+        processed_cmd=$(cat "$tmp_out")
+        
+        # Clean up all temp files
+        rm -f "$tmp_in" "$tmp_out" "$tmp_placeholder" "$tmp_replacement"
+    done
     
-    # Clean up
-    rm "$temp_file"
-    
-    # Return the processed command
+    # Return the fully processed command
     echo "$processed_cmd"
     return 0
 }
@@ -311,29 +348,69 @@ execute_command() {
 show_fzf_interface() {
     printf "\033[0;34mInteractive Command Runner\033[0m\n"
     printf "\033[0;33mStart typing to search, use arrow keys to navigate, Enter to execute\033[0m\n"
-    printf "\033[0;33mCommands with {PLACEHOLDERS} will prompt for values before execution\033[0m\n\n"
+    printf "\033[0;33mCommands with {PLACEHOLDERS} will prompt for values before execution\033[0m\n"
+    printf "\033[0;33mParameters in [--option {PARAMETER}] are optional and can be skipped\033[0m\n\n"
     
     # Show fzf with preview window showing command details
     selected=$(printf '%s\n' "${commands[@]}" | 
         fzf --height 100% --border --ansi --reverse --preview '
             desc=$(echo {} | cut -d ":" -f1)
             cmd=$(echo {} | sed "s/.*:://; s/^ *//")
-            placeholders=$(echo "$cmd" | grep -o "{[A-Z_]*\(:[^}]*\)*}" || echo "None")
+            
+            # Extract regular and optional placeholders
+            regular_placeholders=$(echo "$cmd" | grep -o "{[A-Z_]*\(:[^}]*\)*}" | sort | uniq)
+            optional_patterns=$(echo "$cmd" | grep -o "\[\-\-[^ ]* {[A-Z_]*\(:[^}]*\)*}\]" || echo "")
+            
+            # Extract placeholders from optional patterns
+            optional_placeholders=""
+            if [ -n "$optional_patterns" ]; then
+                for pattern in $optional_patterns; do
+                    placeholder=$(echo "$pattern" | grep -o "{[A-Z_]*\(:[^}]*\)*}")
+                    # Add extracted placeholder to optional_placeholders
+                    optional_placeholders="$optional_placeholders$placeholder
+"
+                done
+            fi
+            
+            # Filter out optional placeholders from regular placeholders
+            required_placeholders=""
+            if [ -n "$regular_placeholders" ]; then
+                for p in $regular_placeholders; do
+                    if ! echo "$optional_placeholders" | grep -q "$p"; then
+                        required_placeholders="$required_placeholders$p
+"
+                    fi
+                done
+            fi
             
             echo "Description: $(printf "\033[0;33m%s\033[0m" "$desc")"
             echo ""
             echo "Command: $(printf "\033[0;32m%s\033[0m" "$cmd")"
             echo ""
-            echo "Placeholders: "
-            if [ "$placeholders" = "None" ]; then
-                echo "None"
+            echo "Required Parameters: "
+            if [ -z "$required_placeholders" ]; then
+                echo "  None"
             else
-                echo "$placeholders" | while read p; do
-                    echo "  $(printf "\033[0;34m%s\033[0m" "$p")"
+                echo "$required_placeholders" | while read p; do
+                    if [ -n "$p" ]; then
+                        echo "  $(printf "\033[0;34m%s\033[0m" "$p")"
+                    fi
                 done
             fi
+            
+            echo ""
+            echo "Optional Parameters: "
+            if [ -n "$optional_patterns" ]; then
+                echo "$optional_patterns" | while read p; do
+                    if [ -n "$p" ]; then
+                        echo "  $(printf "\033[0;32m%s\033[0m" "$p")"
+                    fi
+                done
+            else
+                echo "  None"
+            fi
         ' \
-            --preview-window=down:30% \
+            --preview-window=down:40% \
             --bind "ctrl-y:execute(
                 cmd=\$(echo {1} | sed 's/.*:://; s/^ *//');
                 echo -n \$cmd > /tmp/fzf_cmd.txt;
