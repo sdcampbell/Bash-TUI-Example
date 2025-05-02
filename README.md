@@ -56,22 +56,10 @@ The script comes with several built-in command examples:
 - Git operations
 - System information commands
 
-### AWS Commands
-An AWS-specific version (`awstui.sh`) is also included with AWS CLI commands. Use it the same way:
-```bash
-chmod +x awstui.sh
-./awstui.sh
-```
-
 ### Customizing Commands
 You can customize commands by:
 1. Selecting "Edit command templates" from the main menu, or
 2. Editing the script directly and modifying the `common_commands` array
 
-Command format: `"Description :: actual command {PARAMETER1} {PARAMETER2:default}"`
+Command format: `"Description :: actual command {PARAMETER1} {OPTIONAL-PARAMETER2:default-value}"`
 
-## Demo
-
-In this demo, I've used this project to wrap 47 AWS cli commands. This allows them to be easily organized, searched, update variables, and run or copy the resulting command to the clipboard.
-
-[![Demo Video](https://img.youtube.com/vi/op0Pi2EgJW0/0.jpg)](https://www.youtube.com/watch?v=op0Pi2EgJW0)
